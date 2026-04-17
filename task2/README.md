@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lab 8.2: SSR User Dashboard
+
+**Student:** LeSkipper  
+**Date:** 2026-04-17
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+pages/
+  dashboard.tsx      # SSR user dashboard (getServerSideProps)
+  about.tsx          # SSG about page (getStaticProps)
+  about-ssr.tsx      # SSR about page — for direct SSG vs SSR comparison
+  _app.tsx           # Pages Router app wrapper
+lib/
+  api.ts             # User, Notification types + mock data functions
+```
 
-## Learn More
+## SSR vs SSG Performance Comparison
 
-To learn more about Next.js, take a look at the following resources:
+| Feature | SSG (`/about`) | SSR (`/about-ssr`, `/dashboard`) |
+|---------|----------------|----------------------------------|
+| When renders | Build time (once) | Every request |
+| Data freshness | Fixed at build | Always fresh |
+| TTFB | Fastest — served from CDN | Slower — server must render first |
+| Server load | Near zero | Scales with traffic |
+| Use case | Docs, blog, marketing | Dashboards, auth, real-time |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### How to observe the difference
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Go to `/about` — note the **build time** timestamp. Refresh 10 times — it never changes. ✅ SSG
+2. Go to `/about-ssr` — note the **request time** timestamp. Refresh — it updates every time. ✅ SSR
+3. Go to `/dashboard` — analytics numbers randomize each refresh (fresh server data per request).
 
-## Deploy on Vercel
+## Why SSR for the Dashboard
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The dashboard displays user-specific data (notifications, analytics) that:
+- Differs per user → cannot be shared as static HTML
+- Should reflect latest state on every load → `revalidate` ISR is not enough
+- Requires server context (session, cookies) → `getServerSideProps` has access to `req`/`res`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+SSG would serve the same pre-built page to every user — wrong for personalized content.
