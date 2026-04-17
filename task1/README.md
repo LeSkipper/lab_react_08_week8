@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lab 8.1: Next.js Blog with SSR and SSG
+
+**Student:** LeSkipper  
+**Date:** 2026-04-17
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+pages/
+  index.tsx          # SSG home page with ISR (revalidate: 60s)
+  posts/[id].tsx     # Dynamic SSG post pages with ISR
+  _app.tsx           # Pages Router app wrapper
+types/
+  index.ts           # Post and Author TypeScript interfaces
+lib/
+  api.ts             # Mock data and async fetch functions
+```
 
-## Learn More
+## SSR vs SSG Differences
 
-To learn more about Next.js, take a look at the following resources:
+| Feature | SSR (getServerSideProps) | SSG (getStaticProps) |
+|---------|--------------------------|----------------------|
+| When renders | Every request | Build time |
+| Data freshness | Always fresh | Stale until rebuild (or ISR interval) |
+| TTFB | Slower (server work per request) | Fastest (pre-rendered HTML) |
+| Server load | High (every request hits server) | Low (CDN serves static files) |
+| Use case | User dashboards, auth pages | Blog posts, docs, marketing |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Rendering Strategy Used
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **`/` (Home page):** `getStaticProps` with `revalidate: 60` — SSG + ISR.  
+  Pre-built at build time, regenerates in background every 60 seconds on new request.
 
-## Deploy on Vercel
+- **`/posts/[id]` (Post pages):** `getStaticPaths` + `getStaticProps` with `revalidate: 60` — dynamic SSG + ISR.  
+  All 3 post paths pre-built at build time. `fallback: "blocking"` handles new posts added later.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Why ISR Here
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Blog posts don't change per-user (no SSR needed), but should stay reasonably fresh. ISR gives static performance with periodic refresh — best fit for blog content.
